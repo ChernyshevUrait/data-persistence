@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
 
 public class MainManager : MonoBehaviour
 {
@@ -11,12 +13,15 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text HighScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
     private int m_Points;
     
     private bool m_GameOver = false;
+
+    private HighScore highScore;
 
     
     // Start is called before the first frame update
@@ -36,6 +41,9 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        LoadHighScore();
+        AddPoint(0);
     }
 
     private void Update()
@@ -65,12 +73,68 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
-    }
+        string userName = (DataManager.Instance != null) ? DataManager.Instance.UserName : "Anonymous";
 
+        ScoreText.text = $"Score : {userName} : {m_Points}";
+
+        UpdateHighScore();
+    }
+    
     public void GameOver()
     {
+        SaveHighScore();
         m_GameOver = true;
         GameOverText.SetActive(true);
+    }
+
+    private void LoadHighScore()
+    {
+        string path = Application.persistentDataPath + "/score.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+
+            highScore = JsonUtility.FromJson<HighScore>(json);
+        }
+    }
+
+    private void UpdateHighScoreText()
+    {
+        if (highScore == null)
+        {
+            HighScoreText.text = null;
+        }
+        else
+        {
+            HighScoreText.text = $"Best Score : {highScore.UserName} : {highScore.Score}";
+        }
+    }
+
+    private void SaveHighScore()
+    {
+        if (highScore == null) 
+        { return; }
+
+        string path = Application.persistentDataPath + "/score.json";
+        string json = JsonUtility.ToJson(highScore);
+        File.WriteAllText(path, json);
+    }
+
+    private void UpdateHighScore()
+    {
+        string userName = (DataManager.Instance != null) ? DataManager.Instance.UserName : "Anonymous";
+
+        if (highScore == null)
+        {
+            highScore = new HighScore();
+        }
+
+        if (m_Points > highScore.Score)
+        {
+            highScore.Score = m_Points;
+            highScore.UserName = userName;
+        }
+
+        UpdateHighScoreText();
     }
 }
